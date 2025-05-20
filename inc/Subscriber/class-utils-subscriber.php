@@ -37,10 +37,8 @@ class Utils_Subscriber implements Subscriber_Interface {
 
 	/**
 	 * Removes the scheduled action that deletes auto-draft posts.
-	 *
-	 * @param int $order_id The order ID.
 	 */
-	public function emove_autodraft_cron_delete( int $order_id ): void {
+	public function remove_autodraft_cron_delete(): void {
 		remove_action( 'wp_scheduled_delete', 'wp_delete_auto_drafts' );
 	}
 

@@ -13,22 +13,16 @@
 
 namespace DKO\OU;
 
-use DKO\OU\Admin\WC_Settings_Page;
 use DKO\OU\AssetManagement\Asset_Path;
 use DKO\OU\EventManagement\Event_Manager;
 use DKO\OU\EventManagement\Subscriber_Interface;
-use DKO\OU\Generator\Template_Generator;
 use DKO\OU\Service\Plugin_Details;
 use DKO\OU\Shortcode\Shortcode_Interface;
 use DKO\OU\Subscriber\Admin_Assets_Subscriber;
 use DKO\OU\Subscriber\Assets_Subscriber;
-use DKO\OU\Subscriber\OU_Subscriber;
 use DKO\OU\Subscriber\Details_Subscriber;
-use DKO\OU\Subscriber\Search_Subscriber;
 use DKO\OU\Subscriber\Updater_Subscriber;
 use DKO\OU\Subscriber\Utils_Subscriber;
-use DKO\OU\Subscriber\WC_Settings_Page_Subscriber;
-use DKO\OU\Subscriber\WC_Status_Page_Subscriber;
 use DKO\OU\Updater\Git_Updater;
 
 /**
@@ -155,19 +149,7 @@ class Plugin {
 				self::VERSION,
 				trailingslashit( $this->plugin_path ) . 'language'
 			),
-			new WC_Settings_Page_Subscriber(
-				new WC_Settings_Page( WC_Settings_Page_Subscriber::get_slug() ),
-				$this->plugin_path
-			),
-			new WC_Status_Page_Subscriber(
-				new Template_Generator(
-					self::NAME,
-					$this->plugin_path,
-					'wc-status-page.html'
-				)
-			),
 			new Utils_Subscriber(),
-			new OU_Subscriber(),
 			new Updater_Subscriber(
 				new Git_Updater(
 					self::NAME,
@@ -176,7 +158,6 @@ class Plugin {
 				)
 			),
 			new Details_Subscriber( new Plugin_Details() ),
-			new Search_Subscriber(),
 		);
 	}
 
