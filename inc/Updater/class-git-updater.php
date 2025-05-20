@@ -82,7 +82,7 @@ class Git_Updater implements Updater_Interface {
 				return false;
 			}
 
-			set_transient( self::CACHE_KEY, $remote, DAY_IN_SEOUDS );
+			set_transient( self::CACHE_KEY, $remote, DAY_IN_SECONDS );
 
 		}
 
