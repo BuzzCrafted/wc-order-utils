@@ -1,6 +1,6 @@
 <?php
 /**
- * This file is part of the Woocommerce Custom Order plugin.
+ * This file is part of the Woocommerce Order Utils plugin.
  *
  * (c) Walger Marketing
  *
@@ -9,16 +9,15 @@
  *
  * @author     Walger Marketing
  * @package    OU
- * @subpackage OU/subscriber
+ * @subpackage Ыubscriber
  */
 
 namespace DKO\OU\Subscriber;
 
-use DKO\OU\Entity\Customer_Order;
 use DKO\OU\EventManagement\Subscriber_Interface;
 
 /**
- * Event subscriber that registers REST utils.
+ * Event subscriber that registers custom order number.
  *
  * @author Walger Marketing
  */
@@ -29,203 +28,37 @@ class Utils_Subscriber implements Subscriber_Interface {
 	 */
 	public static function get_subscribed_events() {
 		return array(
-			'rest_api_init' => 'register_routes',
-		);
-	}
-	/**
-	 * Register REST routes
-	 *
-	 * @return void
-	 */
-	public function register_routes() {
-		register_rest_route(
-			'OU/v1/utils',
-			'/regenerate/',
-			array(
-				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'regenerate_order_number' ),
-				'permission_callback' => '__return_true',
-			)
-		);
-
-		register_rest_route(
-			'OU/v1/utils',
-			'/reset/',
-			array(
-				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'reset_order_number' ),
-				'permission_callback' => '__return_true',
-			)
-		);
-
-		register_rest_route(
-			'OU/v1/utils',
-			'/fill-gaps/',
-			array(
-				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'fill_gaps_order_number' ),
-				'permission_callback' => '__return_true',
-			)
-		);
-
-		register_rest_route(
-			'OU/v1/utils',
-			'/persist-numbers/',
-			array(
-				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'persist_order_num' ),
-				'permission_callback' => '__return_true',
-			)
+			'init'                => 'remove_autodraft_cron_delete',
+			'wp_insert_post_data' => array( 'set_published_for_new_order', 10, 2 ),
 		);
 	}
 
+
+
 	/**
-	 * Regenerate order numbers
+	 * Removes the scheduled action that deletes auto-draft posts.
 	 *
-	 * @param  \WP_REST_Request $request The request.
-	 * @return \WP_REST_Response
+	 * @param int $order_id The order ID.
 	 */
-	public function regenerate_order_number( \WP_REST_Request $request ): \WP_REST_Response {
-		$start_date = \WC_Admin_Settings::get_option( 'start_date' );
-		$start_num  = \WC_Admin_Settings::get_option( 'start_num' );
+	public function emove_autodraft_cron_delete( int $order_id ): void {
+		remove_action( 'wp_scheduled_delete', 'wp_delete_auto_drafts' );
+	}
 
-		$orders = wc_get_orders(
-			array(
-				'numberposts'  => -1,
-				'date_created' => '>=' . $start_date,
-				'orderby'      => 'date_created',
-				'order'        => 'ASC',
-			)
-		);
 
-		foreach ( $orders as $order ) {
-			$customer_order = new Customer_Order( $order );
-			$customer_order->set_order_num_seed( (int) $start_num++ );
-			$customer_order->save_meta();
+	/**
+	 * Sets the post status to 'publish' for new shop orders that are auto-drafts.
+	 *
+	 * @param array $post_data The post data.
+	 * @param array $post_attr The post attributes.
+	 * @return array The modified post data.
+	 */
+	public function set_published_for_new_order( $post_data, $post_attr ): array {
+		if ( isset( $post_attr['post_type'] )
+		&& 'shop_order' === $post_attr['post_type']
+		&& 'auto-draft' === $post_data['post_status']
+		) {
+			$post_data['post_status'] = 'publish';
 		}
-
-		return new \WP_REST_Response(
-			array(
-				'success' => true,
-				'message' => 'Custom order numbers for ' . count( $orders ) . ' orders were succesfully regenerated.',
-			)
-		);
-	}
-
-	/**
-	 * Reset order numbers
-	 *
-	 * @param  \WP_REST_Request $request The request.
-	 * @return \WP_REST_Response
-	 */
-	public function reset_order_number( \WP_REST_Request $request ): \WP_REST_Response {
-		$start_date = \WC_Admin_Settings::get_option( 'start_date' );
-		$orders     = wc_get_orders(
-			array(
-				'numberposts'  => -1,
-				'date_created' => '>=' . $start_date,
-				'orderby'      => 'date_created',
-				'order'        => 'ASC',
-			)
-		);
-
-		foreach ( $orders as $order ) {
-			$customer_order = new Customer_Order( $order );
-			$customer_order->reset_order_num();
-		}
-
-		return new \WP_REST_Response(
-			array(
-				'success' => true,
-				'message' => 'Custom order numbers for ' . count( $orders ) . ' orders were succesfully reset.',
-			)
-		);
-	}
-
-	/**
-	 * Fill gaps in order numbers
-	 *
-	 * @param  \WP_REST_Request $request The request.
-	 * @return \WP_REST_Response
-	 */
-	public function fill_gaps_order_number( \WP_REST_Request $request ): \WP_REST_Response {
-		$start_date = \WC_Admin_Settings::get_option( 'start_date' );
-
-		$orders = wc_get_orders(
-			array(
-				'numberposts'  => -1,
-				'date_created' => '>=' . $start_date,
-				'orderby'      => 'date_created',
-				'order'        => 'ASC',
-			)
-		);
-
-		$current_num = -1;
-		foreach ( $orders as $order_key => $order ) {
-			$customer_order = new Customer_Order( $order );
-			if ( ( -1 === $current_num ) && ! ( $order->get_meta( Customer_Order::OU_META_KEY_ORDER_NUM_SEED ) ) ) {
-				$current_num = $orders[ $order_key - 1 ]->get_meta( Customer_Order::OU_META_KEY_ORDER_NUM_SEED );
-				++$current_num;
-			}
-			if ( -1 !== $current_num ) {
-				$customer_order->set_order_num_seed( (int) $current_num );
-				$customer_order->save_meta();
-				set_transient( Customer_Order::OU_TRANSIENT_KEY, $current_num, DAY_IN_SEOUDS );
-				++$current_num;
-			}
-		}
-
-		return new \WP_REST_Response(
-			array(
-				'success' => true,
-				'message' => 'Custom order numbers for ' . count( $orders ) . ' orders were succesfully fixed.',
-			)
-		);
-	}
-
-	/**
-	 * Persist order numbers based on historical settings.
-	 *
-	 * @param  \WP_REST_Request $request The request.
-	 * @return \WP_REST_Response
-	 */
-	public function persist_order_num( \WP_REST_Request $request ): \WP_REST_Response {
-
-		// Process all orders newer than the latest start_date using the current settings.
-		$orders           = wc_get_orders(
-			array(
-				'limit'        => -1, // Get all matching orders.
-				'type'         => 'shop_order',
-				'meta_key'     => Customer_Order::OU_META_KEY_ORDER_NUM_SEED,
-				'meta_compare' => 'EXISTS',
-				'orderby'      => 'date_created',
-				'order'        => 'ASC',
-			)
-		);
-		$processed_orders = 0;
-		foreach ( $orders as $order ) {
-			try {
-				$customer_order = new Customer_Order( $order );
-
-				// Fetch order number seed.
-				$customer_order->get_order_num_seed();
-
-				// Set new order number.
-				$customer_order->set_order_number( $customer_order->construct_order_num() );
-				$customer_order->save_meta();
-
-				++$processed_orders;
-
-			} catch ( \Exception ) {
-				continue; // Skip problematic orders.
-			}
-		}
-
-		return new \WP_REST_Response(
-			array(
-				'success' => true,
-				'message' => 'Custom order numbers for ' . $processed_orders . ' orders were successfully fixed.',
-			)
-		);
+		return $post_data;
 	}
 }
