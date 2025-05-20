@@ -45,6 +45,7 @@ class Plugin_Details {
 			$links[] = sprintf(
 				'<a href="%s" class="thickbox" title="%s">%s</a>',
 				self_admin_url( 'plugin-install.php?tab=plugin-information&amp;plugin=' . $slug . '&amp;TB_iframe=true&amp;width=600&amp;height=550' ),
+				// translators: %s: plugin slug.
 				esc_attr( sprintf( __( 'More information about %s' ), 'wc-order-utils' ) ),
 				__( 'Details', 'wc-order-utils' )
 			);
