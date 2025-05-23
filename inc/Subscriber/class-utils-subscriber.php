@@ -28,8 +28,8 @@ class Utils_Subscriber implements Subscriber_Interface {
 	 */
 	public static function get_subscribed_events() {
 		return array(
-			'init'                => 'remove_autodraft_cron_delete',
-			'wp_insert_post_data' => array( 'set_published_for_new_order', 10, 2 ),
+			'init'                       => 'remove_autodraft_cron_delete',
+			'woocommerce_new_order_data' => array( 'hpos_force_publish_new_order', 10, 2 ),
 		);
 	}
 
@@ -44,19 +44,16 @@ class Utils_Subscriber implements Subscriber_Interface {
 
 
 	/**
-	 * Sets the post status to 'publish' for new shop orders that are auto-drafts.
+	 * Change post_status from auto-draft to publish before inserting into the database.
 	 *
-	 * @param array $post_data The post data.
-	 * @param array $post_attr The post attributes.
-	 * @return array The modified post data.
+	 * @param array    $data  WP_Post data for the new record.
+	 * @param WC_Order $order Order object (without ID yet).
+	 * @return array
 	 */
-	public function set_published_for_new_order( $post_data, $post_attr ): array {
-		if ( isset( $post_attr['post_type'] )
-		&& 'shop_order' === $post_attr['post_type']
-		&& 'auto-draft' === $post_data['post_status']
-		) {
-			$post_data['post_status'] = 'publish';
+	public function hpos_force_publish_new_order( $data, $order ) {
+		if ( ! empty( $data['post_status'] ) && 'auto-draft' === $data['post_status'] ) {
+			$data['post_status'] = 'publish';
 		}
-		return $post_data;
+		return $data;
 	}
 }
