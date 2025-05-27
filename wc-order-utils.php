@@ -11,7 +11,7 @@
  * Plugin Name:       Woocommerce Order Utils
  * Plugin URI:        https://www.walger-marketing.de/wc-order-utils
  * Description:       Add custom order number functionality.
- * Version:           1.0.0
+ * Version:           1.0.2
  * Requires at least: 5.6
  * Requires PHP:      8.0
  * Author:            Walger Marketing
