@@ -23,13 +23,14 @@ use DKO\OU\EventManagement\Subscriber_Interface;
  */
 class Utils_Subscriber implements Subscriber_Interface {
 
+
 	/**
 	 * {@inheritdoc}
 	 */
 	public static function get_subscribed_events() {
 		return array(
-			'init'                       => 'remove_autodraft_cron_delete',
-			'woocommerce_new_order_data' => array( 'hpos_force_publish_new_order', 10, 2 ),
+			'init'                                 => 'remove_autodraft_cron_delete',
+			'woocommerce_before_order_object_save' => array( 'hpos_force_publish_new_order', 20, 2 ),
 		);
 	}
 
@@ -46,14 +47,13 @@ class Utils_Subscriber implements Subscriber_Interface {
 	/**
 	 * Change post_status from auto-draft to publish before inserting into the database.
 	 *
-	 * @param array    $data  WP_Post data for the new record.
-	 * @param WC_Order $order Order object (without ID yet).
-	 * @return array
+	 * @param WC_Data          $order      The object being saved.
+	 * @param WC_Data_Store_WP $data_store THe data store persisting the data.
 	 */
-	public function hpos_force_publish_new_order( $data, $order ) {
-		if ( ! empty( $data['post_status'] ) && 'auto-draft' === $data['post_status'] ) {
-			$data['post_status'] = 'publish';
+	public function hpos_force_publish_new_order( $order, $data_store ) {
+		$is_admin = is_admin();
+		if ( $order->get_status() === 'auto-draft' && $is_admin ) {
+			$order->set_status( 'wc-processing' );
 		}
-		return $data;
 	}
 }
