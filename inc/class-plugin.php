@@ -154,7 +154,7 @@ class Plugin {
 				new Git_Updater(
 					self::NAME,
 					self::VERSION,
-					\WC_Admin_Settings::get_option( 'is_cache_allowed', false )
+					\WC_Admin_Settings::get_option( 'is_cache_allowed', true )
 				)
 			),
 			new Details_Subscriber( new Plugin_Details() ),
